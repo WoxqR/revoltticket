@@ -1,107 +1,235 @@
-require("dotenv").config();
-const { Client, GatewayIntentBits, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField, ChannelType } = require("discord.js");
-const config = require("./config.js");
-const db = require("quick.db");
+const {PermissionsBitField, EmbedBuilder, ButtonStyle, Client, GatewayIntentBits, ChannelType, Partials, ActionRowBuilder, SelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, SelectMenuInteraction, ButtonBuilder } = require("discord.js");
+const Discord = require("discord.js")
+const db = require("croxydb")
+
+// Config yerine environment variables kullanıyoruz
+const config = {
+  token: process.env.TOKEN,
+  channel: process.env.CHANNEL_ID,
+  staff: process.env.STAFF_ROLE_ID
+};
 
 const client = new Client({
-  partials: [Partials.Channel, Partials.Message, Partials.User, Partials.GuildMember, Partials.Reaction],
+  partials: [
+    Partials.Message, // for message
+    Partials.Channel, // for text channel
+    Partials.GuildMember, // for guild member
+    Partials.Reaction, // for message reaction
+    Partials.GuildScheduledEvent, // for guild events
+    Partials.User, // for discord user
+    Partials.ThreadMember, // for thread member
+  ],
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.Guilds, // for guild related things
+    GatewayIntentBits.GuildMembers, // for guild members related things
+    GatewayIntentBits.GuildBans, // for manage guild bans
+    GatewayIntentBits.GuildEmojisAndStickers, // for manage emojis and stickers
+    GatewayIntentBits.GuildIntegrations, // for discord Integrations
+    GatewayIntentBits.GuildWebhooks, // for discord webhooks
+    GatewayIntentBits.GuildInvites, // for guild invite managing
+    GatewayIntentBits.GuildVoiceStates, // for voice related things
+    GatewayIntentBits.GuildPresences, // for user presence things
+    GatewayIntentBits.GuildMessages, // for guild messages things
+    GatewayIntentBits.GuildMessageReactions, // for message reactions things
+    GatewayIntentBits.GuildMessageTyping, // for message typing things
+    GatewayIntentBits.DirectMessages, // for dm messages
+    GatewayIntentBits.DirectMessageReactions, // for dm message reaction
+    GatewayIntentBits.DirectMessageTyping, // for dm message typinh
+    GatewayIntentBits.MessageContent, // enable if you need message content things
   ],
 });
 
-client.once("ready", () => {
-  console.log(`✅ Bot aktif: ${client.user.tag}`);
-  const channel = client.channels.cache.get(config.channel);
-  if (!channel) return console.log("⛔ Kanal bulunamadı.");
+module.exports = client;
 
-  const embed = new EmbedBuilder()
-    .setColor("Random")
-    .setAuthor({ name: "Revolt | Destek Sistemi" })
-    .setDescription("Destek almak için aşağıdaki butona tıklayın ve kategori seçin.")
-    .addFields(
-      { name: "⚠️ Kullanıcı Bildir", value: "Bir kullanıcıyı şikayet edin." },
-      { name: "💸 Satın Alım", value: "Satın alma sorunları." },
-      { name: "⭐ Diğer", value: "Diğer konular." }
-    )
-    .setFooter({ text: "discord.gg/revoltjb" });
+// Render için port ayarı (web servisi gerekebilir)
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("destek-olustur")
-      .setLabel("🎫 Destek Talebi Oluştur")
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  channel.send({ embeds: [embed], components: [row] });
+// Basit bir HTTP endpoint (Render'ın bot'un çalıştığını anlaması için)
+app.get('/', (req, res) => {
+  res.send('Discord Bot is running!');
 });
 
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isButton()) return;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
-  // Ana buton
-  if (interaction.customId === "destek-olustur") {
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("kategori-kullanici").setLabel("⚠️ Kullanıcı Bildir").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("kategori-satin").setLabel("💸 Satın Alım").setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId("kategori-diger").setLabel("⭐ Diğer").setStyle(ButtonStyle.Danger)
-    );
+client.login(config.token)
 
-    return interaction.reply({ content: "Lütfen bir kategori seçin:", components: [row], ephemeral: true });
+client.on("ready", async() => {
+  console.log(`Bot aktif! ${client.user.tag} olarak giriş yapıldı.`)
+  
+  const channel = config.channel
+  const as = client.channels.cache.get(channel)
+  
+  if (!as) {
+    console.log("Kanal bulunamadı! CHANNEL_ID'yi kontrol edin.")
+    return;
+  }
+  
+  const embed = new EmbedBuilder()
+  .setColor(0x127896)
+  .setAuthor({ name: "Revolt | Destek Sistemi", iconURL: as.guild.iconURL({ dynamic: true }) })
+  .setDescription("Sunucumuzda destek oluşturabilmek için aşağıdaki butona basıp bir kategori seçmeniz gerekiyor.")
+  .addFields(
+       { name: '\u200B', value: '\u200B' },
+       { name: "⚠️ Kullanıcı Bildir ", value: "Bir Kullanıcıyı Bildirmek İçin.", inline: true },
+       { name: "💸 Satın Alım ", value: "Satın Alımlar İçin.", inline: true },
+       { name: "⭐ Diğer ", value: "Diğer Sebepler İçin.", inline: true },
+   )
+   .setThumbnail("https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png")
+   .setFooter({ text: "discord.gg/revoltjb", iconURL: "https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png" })
+
+  const row = new Discord.ActionRowBuilder()
+  .addComponents(
+    new Discord.ButtonBuilder()
+    .setLabel("Destek Talebi Oluştur")
+    .setStyle(Discord.ButtonStyle.Secondary)
+    .setCustomId("destek")
+    .setEmoji("🎫")
+  )
+  
+  as.send({embeds: [embed], components:[row]}).catch(console.error)
+})
+
+client.on("interactionCreate", async(interaction) => {
+  if(interaction.customId === "destek") {
+    const row = new Discord.ActionRowBuilder()
+    .addComponents(
+      new Discord.ButtonBuilder()
+      .setEmoji("⚠️")
+      .setStyle(Discord.ButtonStyle.Success)
+      .setCustomId("Kullanıcı Bildir"), 
+      new Discord.ButtonBuilder()
+      .setEmoji("💸")
+      .setStyle(Discord.ButtonStyle.Primary)
+      .setCustomId("Satın Alım"),
+      new Discord.ButtonBuilder()
+      .setEmoji("⭐")
+      .setStyle(Discord.ButtonStyle.Danger)
+      .setCustomId("Diğer Sebepler"),
+    )
+    
+    const embed = new EmbedBuilder()
+    .setDescription("Hangi kategoriyi seçmek istiyorsun?")
+    .setColor(0x127896)
+    
+    interaction.reply({embeds: [embed], components: [row], ephemeral: true}).catch(console.error)
   }
 
-  // Kategoriye göre ticket aç
-  if (interaction.customId.startsWith("kategori-")) {
-    const sebep = interaction.customId.replace("kategori-", "");
-    const data = db.get(`ticket_${interaction.guild.id}`) || 1;
-    const channelName = `ticket-${data}`;
-
-    const ticketChannel = await interaction.guild.channels.create({
-      name: channelName,
+  const butonlar = ["Kullanıcı Bildir","Satın Alım","Diğer Sebepler"]
+  if(butonlar.includes(interaction.customId)) {
+    await interaction.deferUpdate()
+    const data = db.get(`ticket_${interaction.guild.id}`) || 1
+    
+    interaction.guild.channels.create({
+      name: `ticket-${data}`,
       type: ChannelType.GuildText,
       permissionOverwrites: [
-        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
-        { id: config.staff, allow: [PermissionsBitField.Flags.ViewChannel] }
+        {
+          id: interaction.guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: config.staff,
+          allow: [PermissionsBitField.Flags.ViewChannel]
+        },
       ]
-    });
-
-    db.add(`ticket_${interaction.guild.id}`, 1);
-    db.set(`sahip_${ticketChannel.id}`, interaction.user.id);
-    db.set(`sebep_${ticketChannel.id}`, sebep);
-
-    const embed = new EmbedBuilder()
-      .setTitle("🎟️ Destek Talebi Açıldı")
+    })
+    .then((c)=>{
+      const embed = new EmbedBuilder()
+      .setAuthor({name: "Revolt - Destek Sistemi!", iconURL: interaction.guild.iconURL()})
+      .setDescription("Hey, destek talebi açtığına göre önemli bir konu olmalı. Bu sürede birini etiketleme ve sakince sorununu belirt.")
       .addFields(
-        { name: "Kullanıcı", value: interaction.user.tag, inline: true },
-        { name: "Sebep", value: sebep, inline: true },
-        { name: "Kanal", value: `<#${ticketChannel.id}>` }
+        { name: '\u200B', value: '\u200B' },
+        {name: "Kullanıcı:", value: `${interaction.user.tag}`, inline: true},
+        {name: "Sebep:", value: `${interaction.customId}`, inline: true},
+        {name: "Destek Sırası:", value: `${data}`, inline: true}
       )
-      .setColor("Green");
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("kapat").setLabel("📪 Kapat").setStyle(ButtonStyle.Danger)
-    );
-
-    await ticketChannel.send({ embeds: [embed], components: [row] });
-    return interaction.followUp({ content: `✅ Kanal oluşturuldu: <#${ticketChannel.id}>`, ephemeral: true });
+      .setColor(0x127896)
+      
+      const row = new ActionRowBuilder()
+      .addComponents(
+        new Discord.ButtonBuilder()
+        .setEmoji("📑")
+        .setLabel("Kaydet Ve Kapat")
+        .setStyle(Discord.ButtonStyle.Secondary)
+        .setCustomId("kapat"),
+        new Discord.ButtonBuilder()
+        .setEmoji("📋")
+        .setLabel("Mesajlar")
+        .setStyle(Discord.ButtonStyle.Secondary)
+        .setCustomId("mesaj")
+      )
+      
+      db.set(`kapat_${c.id}`, interaction.user.id)
+      db.add(`ticket_${interaction.guild.id}`, 1)
+      
+      c.send({embeds: [embed], components: [row]}).then(a => {
+        a.pin().catch(console.error)
+      })
+    })
+    .catch(console.error)
   }
+})
 
-  // Ticket kapatma
-  if (interaction.customId === "kapat") {
-    const userId = db.get(`sahip_${interaction.channel.id}`);
-    if (interaction.user.id !== userId && !interaction.member.roles.cache.has(config.staff)) {
-      return interaction.reply({ content: "⛔ Bu kanalı kapatma yetkiniz yok.", ephemeral: true });
+client.on("messageCreate", async(message) => {
+  if(message.channel.name.includes("ticket")) {
+    if(message.author?.bot) return;
+    db.push(`mesaj_${message.channel.id}`, `${message.author.username}: ${message.content}`)
+  }
+})
+
+client.on("interactionCreate", async(message) => {
+  if(message.customId === "mesaj") {
+    const fs = require("fs")
+    const datas = db.fetch(`mesaj_${message.channel.id}`)
+    
+    if(!datas) {
+      fs.writeFileSync(`${message.channel.id}.json`, "Bu kanalda hiç bir mesaj bulunamadı!");
+      message.reply({files: [`${message.channel.id}.json`]}).catch(console.error)
+    } else {
+      const data = db.fetch(`mesaj_${message.channel.id}`).join("\n")
+      fs.writeFileSync(`${message.channel.id}.json`, data);
+      message.reply({files: [`${message.channel.id}.json`]}).catch(console.error)
     }
-
-    await interaction.reply({ content: "🕒 Kanal 5 saniye içinde silinecek." });
-    setTimeout(() => {
-      interaction.channel.delete().catch(() => {});
-    }, 5000);
   }
+})
+
+client.on("interactionCreate", async(interaction) => {
+  if(interaction.customId === "kapat") {
+    const id = db.fetch(`kapat_${interaction.channel.id}`)
+    const channel = interaction.channel
+    
+    channel.permissionOverwrites.edit(id, { ViewChannel: false }).catch(console.error);
+    
+    const embed = new EmbedBuilder()
+    .setDescription("Bu destek talebi sonlandırıldı, umarım sorun çözülmüştür :)")
+    .setColor(0x127896)
+    
+    await interaction.reply({embeds: [embed]}).catch(console.error)
+  }
+})
+
+// Hata yakalama
+process.on("unhandledRejection", async(error) => {
+  console.log("Bir hata oluştu: " + error)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully.');
+  client.destroy();
+  process.exit(0);
 });
 
-client.login(config.token);
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully.');
+  client.destroy();
+  process.exit(0);
+});
