@@ -1,5 +1,5 @@
 {
-  "name": "revolt-destek-bot",
+  "name": "revolt-destek-botu",
   "version": "1.0.0",
   "description": "Discord destek sistemi botu - Revolt",
   "main": "index.js",
@@ -8,11 +8,11 @@
   },
   "author": "SeninAdın",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "discord.js": "^14.11.0",
     "croxydb": "^1.0.3"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
