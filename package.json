@@ -1,24 +1,18 @@
 {
-  "name": "ticket-system",
-  "version": "5.0.0",
-  "description": "Light Server Transcript Ticket System By Raven!",
+  "name": "revolt-destek-bot",
+  "version": "1.0.0",
+  "description": "Discord destek sistemi botu - Revolt",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": [],
-  "author": "Ly3ssia",
-  "license": "ISC",
+  "author": "SeninAdın",
+  "license": "MIT",
   "dependencies": {
-    "@discordjs/builders": "^1.0.0",
-    "croxydb": "^0.0.7",
-    "discord.js": "^14.0.1",
-    "express": "^4.18.1",
-    "fs": "^0.0.1-security",
-    "http": "^0.0.1-security",
-    "path": "^0.12.7"
+    "discord.js": "^14.11.0",
+    "croxydb": "^1.0.3"
   },
   "engines": {
-    "node": "16.x"
+    "node": ">=18.0.0"
   }
 }
