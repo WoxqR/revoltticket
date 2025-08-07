@@ -13,6 +13,6 @@
   },
   "dependencies": {
     "discord.js": "^14.11.0",
-    "croxydb": "^1.0.3"
+    "quick.db": "^7.1.3"
   }
 }
