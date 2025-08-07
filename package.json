@@ -1,18 +1,16 @@
 {
-  "name": "revolt-destek-botu",
+  "name": "revolt-ticket-bot",
   "version": "1.0.0",
-  "description": "Discord destek sistemi botu - Revolt",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "Wox",
-  "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "discord.js": "^14.11.0",
-    "quick.db": "^7.1.3"
+    "quick.db": "^7.1.3",
+    "better-sqlite3": "^8.0.1"
   }
 }
