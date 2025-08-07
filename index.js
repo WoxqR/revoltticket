@@ -60,12 +60,52 @@ client.login(config.token)
 client.on("ready", async() => {
   console.log(`Bot aktif! ${client.user.tag} olarak giriş yapıldı.`)
   
+  // Slash command'ları kaydet
+  const commands = [
+    {
+      name: 'setup-ticket',
+      description: 'Destek sistemi mesajını gönder',
+      default_member_permissions: '8' // Administrator permission
+    }
+  ];
+  
+  try {
+    await client.application.commands.set(commands);
+    console.log('Slash commands başarıyla kaydedildi!');
+  } catch (error) {
+    console.error('Slash commands kaydedilirken hata:', error);
+  }
+  
+  // Otomatik mesaj gönderme (sadece bot ilk kez başlatıldığında)
+  const supportMessageSent = db.get(`supportMessage_${client.user.id}`)
+  if (supportMessageSent) {
+    console.log("Destek mesajı zaten gönderilmiş. Manuel olarak tekrar göndermek için /setup-ticket kullanın.")
+    return;
+  }
+  
   const channel = config.channel
   const as = client.channels.cache.get(channel)
   
   if (!as) {
     console.log("Kanal bulunamadı! CHANNEL_ID'yi kontrol edin.")
     return;
+  }
+  
+  // Kanalda önceki destek mesajlarını kontrol et ve sil
+  try {
+    const messages = await as.messages.fetch({ limit: 50 });
+    const botMessages = messages.filter(msg => 
+      msg.author.id === client.user.id && 
+      msg.embeds.length > 0 && 
+      msg.embeds[0].author?.name?.includes("Destek Sistemi")
+    );
+    
+    if (botMessages.size > 0) {
+      console.log(`${botMessages.size} eski destek mesajı siliniyor...`);
+      await Promise.all(botMessages.map(msg => msg.delete().catch(() => {})));
+    }
+  } catch (error) {
+    console.log("Eski mesajları silerken hata:", error.message);
   }
   
   const embed = new EmbedBuilder()
@@ -90,11 +130,71 @@ client.on("ready", async() => {
     .setEmoji("🎫")
   )
   
-  as.send({embeds: [embed], components:[row]}).catch(console.error)
+  try {
+    await as.send({embeds: [embed], components:[row]});
+    // Mesajın gönderildiğini veritabanına kaydet (24 saat için)
+    db.set(`supportMessage_${client.user.id}`, Date.now(), 86400000); // 24 saat
+    console.log("Destek mesajı başarıyla gönderildi.");
+  } catch (error) {
+    console.error("Destek mesajı gönderilirken hata:", error);
+  }
 })
 
 client.on("interactionCreate", async(interaction) => {
   try {
+    // Slash command handler
+    if (interaction.isCommand()) {
+      if (interaction.commandName === 'setup-ticket') {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+          return await interaction.reply({ content: 'Bu komutu kullanmak için yönetici yetkisine sahip olmanız gerekiyor!', ephemeral: true });
+        }
+        
+        const channel = interaction.channel;
+        
+        // Kanalda önceki destek mesajlarını sil
+        try {
+          const messages = await channel.messages.fetch({ limit: 50 });
+          const botMessages = messages.filter(msg => 
+            msg.author.id === client.user.id && 
+            msg.embeds.length > 0 && 
+            msg.embeds[0].author?.name?.includes("Destek Sistemi")
+          );
+          
+          if (botMessages.size > 0) {
+            await Promise.all(botMessages.map(msg => msg.delete().catch(() => {})));
+          }
+        } catch (error) {
+          console.log("Eski mesajları silerken hata:", error.message);
+        }
+        
+        const embed = new EmbedBuilder()
+        .setColor(0x127896)
+        .setAuthor({ name: "Revolt | Destek Sistemi", iconURL: interaction.guild.iconURL({ dynamic: true }) })
+        .setDescription("Sunucumuzda destek oluşturabilmek için aşağıdaki butona basıp bir kategori seçmeniz gerekiyor.")
+        .addFields(
+             { name: '\u200B', value: '\u200B' },
+             { name: "⚠️ Kullanıcı Bildir ", value: "Bir Kullanıcıyı Bildirmek İçin.", inline: true },
+             { name: "💸 Satın Alım ", value: "Satın Alımlar İçin.", inline: true },
+             { name: "⭐ Diğer ", value: "Diğer Sebepler İçin.", inline: true },
+         )
+         .setThumbnail("https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png")
+         .setFooter({ text: "discord.gg/revoltjb", iconURL: "https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png" })
+
+        const row = new Discord.ActionRowBuilder()
+        .addComponents(
+          new Discord.ButtonBuilder()
+          .setLabel("Destek Talebi Oluştur")
+          .setStyle(Discord.ButtonStyle.Secondary)
+          .setCustomId("destek")
+          .setEmoji("🎫")
+        )
+        
+        await channel.send({embeds: [embed], components:[row]});
+        await interaction.reply({ content: 'Destek sistemi mesajı başarıyla gönderildi!', ephemeral: true });
+        return;
+      }
+    }
+    
     if(interaction.customId === "destek") {
       const row = new Discord.ActionRowBuilder()
       .addComponents(
