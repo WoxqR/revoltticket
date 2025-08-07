@@ -99,15 +99,15 @@ client.on("interactionCreate", async(interaction) => {
     .addComponents(
       new Discord.ButtonBuilder()
       .setEmoji("⚠️")
-      .setStyle(Discord.ButtonStyle.Success)
+      .setStyle(Discord.ButtonStyle.Danger)
       .setCustomId("Kullanıcı Bildir"), 
       new Discord.ButtonBuilder()
       .setEmoji("💸")
-      .setStyle(Discord.ButtonStyle.Primary)
+      .setStyle(Discord.ButtonStyle.Success)
       .setCustomId("Satın Alım"),
       new Discord.ButtonBuilder()
       .setEmoji("⭐")
-      .setStyle(Discord.ButtonStyle.Danger)
+      .setStyle(Discord.ButtonStyle.Primary)
       .setCustomId("Diğer Sebepler"),
     )
     
@@ -206,13 +206,26 @@ client.on("interactionCreate", async(interaction) => {
     const id = db.fetch(`kapat_${interaction.channel.id}`)
     const channel = interaction.channel
     
-    channel.permissionOverwrites.edit(id, { ViewChannel: false }).catch(console.error);
-    
     const embed = new EmbedBuilder()
-    .setDescription("Bu destek talebi sonlandırıldı, umarım sorun çözülmüştür :)")
+    .setDescription("Bu destek talebi sonlandırıldı, umarım sorun çözülmüştür :)\n\n**Kanal 5 saniye sonra silinecek...**")
     .setColor(0x127896)
     
     await interaction.reply({embeds: [embed]}).catch(console.error)
+    
+    // 5 saniye bekleyip kanalı sil
+    setTimeout(async () => {
+      try {
+        // Mesaj geçmişini temizle (veritabanından)
+        db.delete(`mesaj_${channel.id}`)
+        db.delete(`kapat_${channel.id}`)
+        
+        // Kanalı sil
+        await channel.delete("Destek talebi kapatıldı")
+        console.log(`Ticket kanalı silindi: ${channel.name}`)
+      } catch (error) {
+        console.error("Kanal silinirken hata oluştu:", error)
+      }
+    }, 5000)
   }
 })
 
