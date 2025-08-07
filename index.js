@@ -1,18 +1,6 @@
-// Node.js sürüm kontrolü (en az 18 olmalı)
-const requiredNodeVersion = 18;
-const currentNodeVersion = parseInt(process.versions.node.split('.')[0]);
-
-if (currentNodeVersion < requiredNodeVersion) {
-  console.error(`Node.js sürümünüz ${process.versions.node}. Lütfen Node.js ${requiredNodeVersion} veya üzeri bir sürüme yükseltin.`);
-  process.exit(1);
-}
-
-const { 
-  PermissionsBitField, EmbedBuilder, ButtonStyle, Client, GatewayIntentBits, ChannelType, Partials, ActionRowBuilder, ButtonBuilder 
-} = require("discord.js");
-
+const { PermissionsBitField, EmbedBuilder, ButtonStyle, Client, GatewayIntentBits, ChannelType, Partials, ActionRowBuilder, ButtonBuilder } = require("discord.js");
 const config = require("./config.js");
-const db = require("croxydb");
+const db = require("quick.db");
 
 const client = new Client({
   partials: [
@@ -54,7 +42,7 @@ client.on("ready", async () => {
 
   const embed = new EmbedBuilder()
     .setColor("127896")
-    .setAuthor({ name: `Revolt | Destek Sistemi`, iconURL: as.guild.iconURL({ dynamic: true }) })
+    .setAuthor({ name: "Revolt | Destek Sistemi", iconURL: as.guild.iconURL({ dynamic: true }) })
     .setDescription("Sunucumuzda destek oluşturabilmek için aşağıdaki butona basıp bir kategori seçmeniz gerekiyor.")
     .addFields(
       { name: '\u200B', value: '\u200B' },
@@ -80,7 +68,6 @@ client.on("ready", async () => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  // Destek talebi oluştur butonu tıklanınca kategori butonları göster
   if (interaction.customId === "destek") {
     const row = new ActionRowBuilder()
       .addComponents(
@@ -94,7 +81,7 @@ client.on("interactionCreate", async (interaction) => {
           .setCustomId("Satın Alım"),
         new ButtonBuilder()
           .setEmoji("⭐")
-          .setStyle(ButtonStyle.Secondary) // Daha nötr renk
+          .setStyle(ButtonStyle.Secondary)
           .setCustomId("Diğer Sebepler")
       );
 
@@ -105,7 +92,6 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
   }
 
-  // Kategori butonları tıklanınca ticket kanalı oluştur
   const categories = ["Kullanıcı Bildir", "Satın Alım", "Diğer Sebepler"];
   if (categories.includes(interaction.customId)) {
     await interaction.deferUpdate();
@@ -118,17 +104,17 @@ client.on("interactionCreate", async (interaction) => {
       permissionOverwrites: [
         {
           id: interaction.guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
+          deny: [PermissionsBitField.Flags.ViewChannel],
         },
         {
           id: interaction.user.id,
-          allow: [PermissionsBitField.Flags.ViewChannel]
+          allow: [PermissionsBitField.Flags.ViewChannel],
         },
         {
           id: config.staff,
-          allow: [PermissionsBitField.Flags.ViewChannel]
-        }
-      ]
+          allow: [PermissionsBitField.Flags.ViewChannel],
+        },
+      ],
     });
 
     const embed = new EmbedBuilder()
@@ -159,18 +145,16 @@ client.on("interactionCreate", async (interaction) => {
     db.set(`kapat_${channel.id}`, interaction.user.id);
     db.add(`ticket_${interaction.guild.id}`, 1);
 
-    await channel.send({ embeds: [embed], components: [row] }).then(msg => msg.pin());
+    await channel.send({ embeds: [embed], components: [row] }).then((a) => a.pin());
   }
 
-  // Mesaj butonu ile ticket mesajlarını json dosyası olarak gönder
   if (interaction.customId === "mesaj") {
     const fs = require("fs");
-    const datas = db.fetch(`mesaj_${interaction.channel.id}`);
+    const datas = db.get(`mesaj_${interaction.channel.id}`);
 
     if (!datas || datas.length === 0) {
       fs.writeFileSync(`${interaction.channel.id}.json`, "Bu kanalda hiç bir mesaj bulunamadı!");
-      await interaction.reply({ files: [`./${interaction.channel.id}.json`], ephemeral: true }).catch(() => {});
-      return;
+      return interaction.reply({ files: [`./${interaction.channel.id}.json`], ephemeral: true }).catch(() => {});
     }
 
     const dataText = datas.join("\n");
@@ -178,9 +162,8 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply({ files: [`./${interaction.channel.id}.json`], ephemeral: true }).catch(() => {});
   }
 
-  // Ticket kapatma butonu
   if (interaction.customId === "kapat") {
-    const id = db.fetch(`kapat_${interaction.channel.id}`);
+    const id = db.get(`kapat_${interaction.channel.id}`);
     if (!id) return interaction.reply({ content: "Bilet sahibi bulunamadı.", ephemeral: true });
 
     await interaction.channel.permissionOverwrites.edit(id, { ViewChannel: false });
@@ -192,7 +175,6 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// Mesajları veritabanına kaydet
 client.on("messageCreate", async (message) => {
   if (!message.guild) return;
   if (message.author.bot) return;
@@ -201,7 +183,6 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-// Hata yakalama
 process.on("unhandledRejection", async (error) => {
   console.log("Bir hata oluştu: " + error);
 });
