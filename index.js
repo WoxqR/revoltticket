@@ -53,7 +53,7 @@ const embed = new EmbedBuilder()
      { name: "⭐ Diğer ", value: "Diğer Sebepler İçin.", inline: true },
  )
  .setThumbnail("https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png")
- .setFooter({ text: "Kod destek hakkında yardım almak için '⛔・kod-destek' kanalını kullanın!", iconURL: "https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png" })
+ .setFooter({ text: "discord.gg/revoltjb", iconURL: "https://cdn.discordapp.com/attachments/1016663875342569562/1045979609965015080/ravenDestek.png" })
 
 const row = new Discord.ActionRowBuilder()
 .addComponents(
