@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js"
   },
-  "author": "SeninAdın",
+  "author": "Wox",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
