@@ -6,7 +6,11 @@ const db = require("croxydb")
 const config = {
   token: process.env.TOKEN,
   channel: process.env.CHANNEL_ID,
-  staff: process.env.STAFF_ROLE_ID
+  staff: process.env.STAFF_ROLE_ID,
+  // Kategori ID'leri
+  userReportCategory: process.env.USER_REPORT_CATEGORY_ID,
+  purchaseCategory: process.env.PURCHASE_CATEGORY_ID,
+  otherCategory: process.env.OTHER_CATEGORY_ID
 };
 
 const client = new Client({
@@ -200,15 +204,15 @@ client.on("interactionCreate", async(interaction) => {
       .addComponents(
         new Discord.ButtonBuilder()
         .setEmoji("⚠️")
-        .setStyle(Discord.ButtonStyle.Success)
+        .setStyle(Discord.ButtonStyle.Danger)  // Kırmızı
         .setCustomId("Kullanıcı Bildir"), 
         new Discord.ButtonBuilder()
         .setEmoji("💸")
-        .setStyle(Discord.ButtonStyle.Primary)
+        .setStyle(Discord.ButtonStyle.Success)  // Yeşil
         .setCustomId("Satın Alım"),
         new Discord.ButtonBuilder()
         .setEmoji("⭐")
-        .setStyle(Discord.ButtonStyle.Danger)
+        .setStyle(Discord.ButtonStyle.Primary)  // Mavi
         .setCustomId("Diğer Sebepler"),
       )
       
@@ -226,8 +230,29 @@ client.on("interactionCreate", async(interaction) => {
       await interaction.deferUpdate()
       const data = db.get(`ticket_${interaction.guild.id}`) || 1
       
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${data}`,
+      // Kategori seçme
+      let categoryId;
+      switch(interaction.customId) {
+        case "Kullanıcı Bildir":
+          categoryId = config.userReportCategory;
+          break;
+        case "Satın Alım":
+          categoryId = config.purchaseCategory;
+          break;
+        case "Diğer Sebepler":
+          categoryId = config.otherCategory;
+          break;
+      }
+      
+      // Kullanıcı adını temizle (Discord kanal ismi kurallarına uygun hale getir)
+      const cleanUsername = interaction.user.username
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Özel karakterleri tire ile değiştir
+        .replace(/-+/g, '-') // Birden fazla tireyi tek tire yap
+        .replace(/^-|-$/g, ''); // Başındaki ve sonundaki tireleri kaldır
+      
+      const channelOptions = {
+        name: `ticket-${cleanUsername}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
           {
@@ -243,7 +268,14 @@ client.on("interactionCreate", async(interaction) => {
             allow: [PermissionsBitField.Flags.ViewChannel]
           },
         ]
-      })
+      };
+      
+      // Eğer kategori ID'si varsa ekle
+      if (categoryId) {
+        channelOptions.parent = categoryId;
+      }
+      
+      const channel = await interaction.guild.channels.create(channelOptions)
       
       const embed = new EmbedBuilder()
       .setAuthor({name: "Revolt - Destek Sistemi!", iconURL: interaction.guild.iconURL()})
